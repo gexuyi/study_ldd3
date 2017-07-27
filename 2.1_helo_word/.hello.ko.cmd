@@ -1,1 +1,0 @@
-cmd_/root/for_kernel_sty/2.1_helo_word/hello.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /root/for_kernel_sty/2.1_helo_word/hello.ko /root/for_kernel_sty/2.1_helo_word/hello.o /root/for_kernel_sty/2.1_helo_word/hello.mod.o
