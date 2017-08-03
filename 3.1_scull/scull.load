@@ -1,0 +1,8 @@
+#!/bin/bash
+
+insmod scull.ko
+maj=$(grep scull /proc/devices | awk '{print $1}')
+echo "maj --> $maj"
+
+mknod /dev/scull0 c $maj 0
+

@@ -1,11 +1,15 @@
 #include "scull.h"
 
+// global var
+struct scull_dev *scull_devices;
+
 // free all kernel mem for dev
 static int scull_trim(struct scull_dev *dev)
 {
-	assert(dev, err);
-	
+	int i = 0;
 	struct scull_qset *data;
+
+	assert(dev, err);
 
 	for (data = dev->data; data; data = data->next) {
 		if (data->data) {
@@ -31,25 +35,6 @@ err:
 	return -1;
 }
 
-static int scull_setup_cdev(struct scull_dev *dev, int index)
-{
-	int err;
-	int devno;
-
-	cdev_init(&dev->cdev, scull_fops);
-	dev->cdev.owner = THIS_MODULE;
-
-	devno = MKDEV(scull_major, scull_minor + index);
-	err = cdev_add(&dev->cdev, devno, 1);
-	if (err) {
-		printk(KERN_NOTICE "Error %d adding scull(%d)\n",
-		       err, index);
-		return err;
-	}
-
-	return 0;
-}
-
 int scull_open(struct inode *inode, struct file *filp)
 {
 	struct scull_dev *dev;
@@ -61,14 +46,14 @@ int scull_open(struct inode *inode, struct file *filp)
 		scull_trim(dev);
 	}
 
-	printk(KERN_ALERT "Call open dev: %p", dev);
+	printk(KERN_ALERT "Call open dev: %p\n", dev);
 
 	return 0;
 }
 
 int scull_release(struct inode *inode, struct file *filp)
 {
-	printk(KERN_ALERT "Call release dev: %p", filp->private_data);
+	printk(KERN_ALERT "Call release dev: %p\n", filp->private_data);
 
 	return 0;
 }
@@ -80,6 +65,7 @@ struct scull_qset *scull_follow(struct scull_dev *dev, int item)
 	if (!dev->data) {
 		// if fail, do nothing, deal in write
 		dev->data = kmalloc(sizeof(struct scull_qset), GFP_KERNEL);
+		memset(dev->data, 0, sizeof(struct scull_qset));
 	}
 
 	qset = dev->data;
@@ -103,18 +89,20 @@ struct scull_qset *scull_follow(struct scull_dev *dev, int item)
 ssize_t scull_read(struct file *filp, char __user *buff, 
 	     size_t count, loff_t *offp)
 {
-	assert(filp, err);
-
 	int retval = 0;
+	int item;
 	struct scull_dev *dev;
 	int quantum, qset, itemsize, s_pos, q_pos, rest;
 	struct scull_qset *dptr;
+
+	assert(filp, err);
 
 	dev = filp->private_data;
 	quantum = dev->quantum;
 	qset = dev->qset;
 	itemsize = quantum * qset;
 
+	printk (KERN_ALERT "begin read count: %d, offp: %lld\n", count, *offp);
 	if (down_interruptible(&dev->sem)) {
 		return -ERESTARTSYS;
 	}
@@ -136,7 +124,7 @@ ssize_t scull_read(struct file *filp, char __user *buff,
 
 	dptr = scull_follow(dev, item);
 	if (dptr == NULL || !dptr->data || !dptr->data[s_pos]) {
-		printk(KERN_ALERT "There is a hole %lu", *offp);
+		printk(KERN_ALERT "There is a hole %lld\n", *offp);
 		goto out;
 	}
 
@@ -154,6 +142,7 @@ ssize_t scull_read(struct file *filp, char __user *buff,
 
 out:
 	up(&dev->sem);
+	printk (KERN_ALERT "finish read count: %d, offp: %lld\n", count, *offp);
 	return retval;
 
 err:
@@ -163,13 +152,15 @@ err:
 ssize_t scull_write(struct file *filp, const char __user *buff,
 	      size_t count, loff_t *offp)
 {
-	assert(filp, err);
-
+	int item;
 	// default for no mem
 	int retval = -ENOMEM;
 	struct scull_dev *dev;
 	int quantum, qset, itemsize, s_pos, q_pos, rest;
 	struct scull_qset *dptr;
+
+	assert(filp, err);
+	printk(KERN_ALERT "begin write count: %d, offp: %lld\n", count, *offp);
 
 	dev = filp->private_data;
 	quantum = dev->quantum;
@@ -180,10 +171,6 @@ ssize_t scull_write(struct file *filp, const char __user *buff,
 		return -ERESTARTSYS;
 	}
 
-	if (*offp + count >= dev->size) {
-		count = dev->size - *offp;
-	}
-
 	item = (long)*offp / itemsize;
 	rest = (long)*offp % itemsize;
 
@@ -191,18 +178,18 @@ ssize_t scull_write(struct file *filp, const char __user *buff,
 	q_pos = rest % quantum;
 
 	dptr = scull_follow(dev, item);
-	if (dptr == NULL) {
-		printk(KERN_ALERT "There is No mem for write %lu", *offp);
+	if (!dptr) {
+		printk(KERN_ALERT "There is No mem for write %lld\n", *offp);
 		goto out;
 	}
 
 	if (!dptr->data) {
-		dptr->data = kmalloc(sizeof(char) * qset, GFP_KERNEL);	
+		dptr->data = kmalloc(sizeof(char *) * qset, GFP_KERNEL);	
 		if (!dptr->data) {
 			goto out;
 		}
 
-		memset(dptr->data, 0, sizeof(char) * qset);
+		memset(dptr->data, 0, sizeof(char *) * qset);
 	}
 
 	if (!dptr->data[s_pos]) {
@@ -230,6 +217,7 @@ ssize_t scull_write(struct file *filp, const char __user *buff,
 		dev->size = *offp;
 	}
 
+	printk(KERN_ALERT "finish write, count: %d, offp: %lld\n", count, *offp);
 out:
 	up(&dev->sem);
 	return retval;
@@ -238,15 +226,103 @@ err:
 	return -EINVAL;
 }
 
-static int scull_init(void)
+struct file_operations scull_fops = {
+	.owner  = THIS_MODULE,
+//	.llseek = scull_llseek,
+	.read   = scull_read,
+	.write  = scull_write,
+//	.ioctl  = scull_ioctl,
+	.open   = scull_open,
+	.release = scull_release,
+};
+
+static int scull_setup_cdev(struct scull_dev *dev, int index)
 {
-	printk(KERN_ALERT "scull init\n");
+	int err;
+	int devno;
+
+	cdev_init(&dev->cdev, &scull_fops);
+	dev->cdev.owner = THIS_MODULE;
+
+	devno = MKDEV(scull_major, scull_minor + index);
+	err = cdev_add(&dev->cdev, devno, 1);
+	if (err) {
+		printk(KERN_NOTICE "Error %d adding scull(%d)\n",
+		       err, index);
+		return err;
+	}
 
 	return 0;
 }
 
+static void scull_cleanup(void)
+{
+	int i = 0;
+	dev_t dev;
+
+	if (scull_devices) {
+		for (i = 0; i < scull_nr; i++) {
+			scull_trim(&scull_devices[i]);
+			cdev_del(&scull_devices[i].cdev);
+		}
+
+		kfree(scull_devices);
+	}
+
+	dev = MKDEV(scull_major, scull_minor);
+	unregister_chrdev_region(dev, scull_nr);
+}
+
+static int scull_init(void)
+{
+	int i = 0;
+	int res = 0;
+	dev_t dev = 0;
+
+	printk(KERN_ALERT "scull init\n");
+
+	// alloc region major
+	if (scull_major) {
+		dev = MKDEV(scull_major, scull_minor);
+		res = register_chrdev_region(dev, scull_nr, "scull");
+	} else {
+		res = alloc_chrdev_region(&dev, scull_minor, scull_nr, "scull");
+		scull_major = MAJOR(dev);
+	}
+
+	if (res < 0) {
+		printk(KERN_ALERT "alloc region fail: ma(%u), mi(%u)\n",
+				  scull_major, scull_minor);
+		return res;
+	}
+
+	scull_devices = kmalloc(sizeof(struct scull_dev) * scull_nr, GFP_KERNEL);
+	if (!scull_devices) {
+		res = -ENOMEM;
+		goto fail;
+	}
+
+	memset(scull_devices, 0, scull_nr * sizeof(struct scull_dev));
+
+	for (i = 0; i < scull_nr; i++) {
+		scull_devices[i].quantum = s_quantum;
+		scull_devices[i].qset    = s_qset;
+		sema_init(&scull_devices[i].sem, 1);
+		scull_setup_cdev(&scull_devices[i], i);
+	}
+
+
+	return 0;
+
+fail:
+	scull_cleanup();
+	return res;
+}
+
 static void scull_exit(void)
 {
+	scull_cleanup();
+
 	printk(KERN_ALERT "Goodbly, scull device\n");
 }
 

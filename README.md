@@ -17,4 +17,13 @@ phase 1.
 phase 2.
 	scull_read/write: add read/write for scull device
 
+phase 3.
+	finish scull_init and scull_exit to init module and exit module
+	now:
+		bash ./scull.load   --> insmod scull.ko && mknod device
+		echo/dd/fio to /dev/scull0  --> test read
+		cat/dd/fio  from /dev/scull0 --> test write
+		exp:
+		   echo "helo" > /dev/scull0
+		   cat /dev/scull0    // also can monitor dmesg by `dmesg -m -T`
 
