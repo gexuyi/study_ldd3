@@ -102,7 +102,7 @@ ssize_t scull_read(struct file *filp, char __user *buff,
 	qset = dev->qset;
 	itemsize = quantum * qset;
 
-	printk (KERN_ALERT "begin read count: %d, offp: %lld\n", count, *offp);
+	printk (KERN_ALERT "begin read count: %zu, offp: %lld\n", count, *offp);
 	if (down_interruptible(&dev->sem)) {
 		return -ERESTARTSYS;
 	}
@@ -142,7 +142,7 @@ ssize_t scull_read(struct file *filp, char __user *buff,
 
 out:
 	up(&dev->sem);
-	printk (KERN_ALERT "finish read count: %d, offp: %lld\n", count, *offp);
+	printk (KERN_ALERT "finish read count: %zu, offp: %lld\n", count, *offp);
 	return retval;
 
 err:
@@ -160,7 +160,7 @@ ssize_t scull_write(struct file *filp, const char __user *buff,
 	struct scull_qset *dptr;
 
 	assert(filp, err);
-	printk(KERN_ALERT "begin write count: %d, offp: %lld\n", count, *offp);
+	printk(KERN_ALERT "begin write count: %zu, offp: %lld\n", count, *offp);
 
 	dev = filp->private_data;
 	quantum = dev->quantum;
@@ -217,7 +217,7 @@ ssize_t scull_write(struct file *filp, const char __user *buff,
 		dev->size = *offp;
 	}
 
-	printk(KERN_ALERT "finish write, count: %d, offp: %lld\n", count, *offp);
+	printk(KERN_ALERT "finish write, count: %zu, offp: %lld\n", count, *offp);
 out:
 	up(&dev->sem);
 	return retval;
@@ -280,6 +280,7 @@ static int scull_init(void)
 	dev_t dev = 0;
 
 	printk(KERN_ALERT "scull init\n");
+	S_LOG("test cfalgs log\n");
 
 	// alloc region major
 	if (scull_major) {

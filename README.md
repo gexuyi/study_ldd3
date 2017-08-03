@@ -27,3 +27,10 @@ phase 3.
 		   echo "helo" > /dev/scull0
 		   cat /dev/scull0    // also can monitor dmesg by `dmesg -m -T`
 
+phase 4.
+	add S_DBEUG macro for debug or not
+	#NOTICE
+	   when i write makefile, statement "DEBUG = y ",
+	   a space after line made "ifeq ($(DEBUG), y)" not true,
+	   so never let spaces before a new line
+

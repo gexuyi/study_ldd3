@@ -17,6 +17,12 @@ MODULE_LICENSE("GPL");
 		} \
 	} while(0);
 
+#ifdef S_DEBUG 
+#define S_LOG(fmt, args...) printk(KERN_ALERT "scull: " fmt, ##args)
+#else 
+#define S_LOG(fmt, args...)	/* do nothing */
+#endif
+
 #define SCULL_NR  8
 #define S_QUANTUM 4000
 #define S_QSET    1000
