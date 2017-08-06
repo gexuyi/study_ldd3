@@ -6,6 +6,7 @@
 #include <linux/cdev.h>
 #include <linux/slab.h>
 #include <asm/uaccess.h>
+#include <linux/proc_fs.h>
 
 MODULE_LICENSE("GPL");
 
@@ -26,6 +27,8 @@ MODULE_LICENSE("GPL");
 #define SCULL_NR  8
 #define S_QUANTUM 4000
 #define S_QSET    1000
+
+#define SCULL_PROC_NAME "scull_gxy"
 
 unsigned int scull_major, scull_minor;
 unsigned int s_quantum = S_QUANTUM;

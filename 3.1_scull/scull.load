@@ -1,8 +1,40 @@
 #!/bin/bash
+#
+# author: gexuyi
+# at: 2017-08-06
+# brief:
+# 	load scull.ko, and mknod some scull for test
+#
+# Usage:
+#	./$0 [config_of_scull_module]
+#
 
-insmod scull.ko
-maj=$(grep scull /proc/devices | awk '{print $1}')
+module="scull"
+device="scull"
+mode="644"
+
+if grep '^staff:' /etc/group > /dev/null; then
+	group="staff"
+else
+	group="wheel"
+fi
+
+rm -fv /dev/${device}?
+
+
+/sbin/insmod -f ./${module}.ko $* || exit 1
+
+maj=$(grep $module /proc/devices | awk '{print $1}')
 echo "maj --> $maj"
 
-mknod /dev/scull0 c $maj 0
+mknod /dev/${device}0 c $maj 0
+mknod /dev/${device}1 c $maj 1
+mknod /dev/${device}2 c $maj 2
+mknod /dev/${device}3 c $maj 3
+
+# notice if current dir not have ${device}0, ln will try /dev/${device}0
+ln -sf ${device}0 /dev/${device}
+
+chgrp $group /dev/${device}[0-3]
+chmod $mode  /dev/${device}[0-3]
 

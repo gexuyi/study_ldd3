@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# author: gexuyi
+# at: 2017-08-06
+# brief:
+# 	rmmod scull.ko and rm /dev/scull file
+#
+# Usage:
+#	./$0 	#no arg
+#
+
+module="scull"
+device="scull"
+
+/sbin/rmmod $module $* || exit 1
+
+rm -fv /dev/${device}[0-3] /dev/${device}
+
+exit 0
+

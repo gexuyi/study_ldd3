@@ -34,3 +34,15 @@ phase 4.
 	   a space after line made "ifeq ($(DEBUG), y)" not true,
 	   so never let spaces before a new line
 
+phase 5.
+	there is some differen between 2.6 and 3.10 in proc file operater
+	so very simple proc entry create for scull(only support 3.10)
+
+	add scull.load and scull.unload
+	Usage:
+		cd $code_path
+		make
+		bash scull.load/scull.unload --> only support current dir op
+
+	add misc-progs/gdbline for gdb vmlinux add section for print some var value
+

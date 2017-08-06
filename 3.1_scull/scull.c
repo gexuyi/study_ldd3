@@ -226,7 +226,7 @@ err:
 	return -EINVAL;
 }
 
-struct file_operations scull_fops = {
+static struct file_operations scull_fops = {
 	.owner  = THIS_MODULE,
 //	.llseek = scull_llseek,
 	.read   = scull_read,
@@ -255,6 +255,27 @@ static int scull_setup_cdev(struct scull_dev *dev, int index)
 	return 0;
 }
 
+
+ssize_t scull_proc_read(struct file *filp, char __user *buff, 
+	     size_t count, loff_t *offp)
+{
+	int len = 0;
+
+	const char *buf = "helo word by gexy";
+	len = strlen(buf);
+	if (copy_to_user(buff, buf, len)) {
+		return -EINVAL;
+	}
+
+	printk (KERN_ALERT "begin read count: %zu, offp: %lld\n", count, *offp);
+
+	return 0;
+}
+
+struct file_operations scull_proc_fops = {
+	.read = scull_proc_read,
+};
+
 static void scull_cleanup(void)
 {
 	int i = 0;
@@ -271,6 +292,8 @@ static void scull_cleanup(void)
 
 	dev = MKDEV(scull_major, scull_minor);
 	unregister_chrdev_region(dev, scull_nr);
+
+	remove_proc_entry(SCULL_PROC_NAME, NULL);
 }
 
 static int scull_init(void)
@@ -312,6 +335,7 @@ static int scull_init(void)
 		scull_setup_cdev(&scull_devices[i], i);
 	}
 
+	proc_create(SCULL_PROC_NAME, 0, NULL, &scull_proc_fops);
 
 	return 0;
 

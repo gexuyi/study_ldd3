@@ -1,0 +1,32 @@
+#!/bin/bash
+#
+# author: gexuyi
+# at: 2017-08-06
+# brief:
+# 	generate gdb line for $(gdb $path_of_vmlinux /proc/kcore)
+#
+# Usage:
+#	./$0 $module_name $module_path
+#
+
+function usage()
+{
+cat << EOF
+	./$0 module_name module_path
+EOF
+
+	exit 1
+}
+
+[ $# -ne 2 ] && usage
+
+pushd /sys/module/$1/sections &>/dev/null
+{
+	echo -n "add-symbol-file $2 $(cat .text) "
+	echo -n "-s .bss $(cat .bss) -s .data $(cat .data)"
+}
+popd &>/dev/null
+
+# new line
+echo ""
+
