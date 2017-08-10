@@ -3,6 +3,65 @@
 // global var
 struct scull_dev *scull_devices;
 
+/* simple implement:
+ * only for quantum, same with qset
+ */
+long scull_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+	int err = 0;
+	long retval = 0;
+
+	if (_IOC_TYPE(cmd) != SCULL_IOC_MAGIC) {
+		return -ENOTTY;
+	}
+
+	if (_IOC_NR(cmd) > SCULL_IOC_MAXNR) {
+		return -ENOTTY;
+	}
+
+	if (_IOC_DIR(cmd) & _IOC_READ) {
+		err = !access_ok(VERIFY_WRITE, (void __user *)arg, _IOC_SIZE(cmd));
+	} else if (_IOC_DIR(cmd) & _IOC_WRITE) {
+		err = !access_ok(VERIFY_READ, (void __user *)arg, _IOC_SIZE(cmd));
+	}
+
+	if (err) {
+		return -EFAULT;
+	}
+
+	printk(KERN_ALERT "cmd: %d, arg: %lu\n", _IOC_NR(cmd), arg);
+
+	switch(cmd) {
+	case SCULL_IOCRESET:
+		s_quantum = S_QUANTUM;
+		break;
+
+	case SCULL_IOCSQUANTUM:
+		if (!capable(CAP_SYS_ADMIN)) {
+			return -EPERM;
+		}
+
+		retval = __get_user(s_quantum, (int __user *)arg);
+		break;
+	case SCULL_IOCTQUANTUM:
+		if (!capable(CAP_SYS_ADMIN)) {
+			return -EPERM;
+		}
+
+		s_quantum = arg;
+		break;
+
+	case SCULL_IOCGQUANTUM:
+		retval = __put_user(s_quantum, (int __user *)arg);
+		break;
+	case SCULL_IOCQQUANTUM:
+		return s_quantum;
+		break;
+	}
+
+	return 0;
+}
+
 // free all kernel mem for dev
 static int scull_trim(struct scull_dev *dev)
 {
@@ -231,7 +290,7 @@ static struct file_operations scull_fops = {
 //	.llseek = scull_llseek,
 	.read   = scull_read,
 	.write  = scull_write,
-//	.ioctl  = scull_ioctl,
+	.unlocked_ioctl  = scull_ioctl,
 	.open   = scull_open,
 	.release = scull_release,
 };

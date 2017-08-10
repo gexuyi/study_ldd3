@@ -46,3 +46,10 @@ phase 5.
 
 	add misc-progs/gdbline for gdb vmlinux add section for print some var value
 
+phase 6.
+	add scull_ioctl for scull dev, and s_ioctl_test.c for test ioctl
+	Usage:
+		cd $code_path
+		make && bash scull.load
+		make test && ./s_ioctl_test /dev/scull
+

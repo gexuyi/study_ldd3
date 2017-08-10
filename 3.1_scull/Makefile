@@ -26,6 +26,10 @@ default:
 
 endif
 
+test:
+	gcc -g -o s_ioctl_test s_ioctl_test.c
+
 clean:
-	rm -rf *.o *core *.depend *.cmd *.ko *.mod.c .tmp_versions  *odule* .scull* .Make*
+	rm -rf *.o *core *.depend *.cmd *.ko *.mod.c .tmp_versions  *odule* .scull* .Make* s_ioctl_test
+
 

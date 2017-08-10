@@ -54,3 +54,13 @@ struct scull_dev {
 	struct cdev cdev;
 };
 
+#define SCULL_IOC_MAGIC 'k'
+
+#define SCULL_IOCRESET    _IO(SCULL_IOC_MAGIC,  7)
+#define SCULL_IOCSQUANTUM _IOW(SCULL_IOC_MAGIC, 8, int)
+#define SCULL_IOCTQUANTUM _IOW(SCULL_IOC_MAGIC, 9, int)
+#define SCULL_IOCGQUANTUM _IOR(SCULL_IOC_MAGIC, 10, int)
+#define SCULL_IOCQQUANTUM _IOR(SCULL_IOC_MAGIC, 11, int)
+
+#define SCULL_IOC_MAXNR 'b'
+
